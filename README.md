@@ -1,4 +1,4 @@
-# Web Text Pipe
+# ✍️ Web Text Pipe
 
 [![Language](https://img.shields.io/badge/Language-Go-blue)](https://golang.org/)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/shouni/web-text-pipe-go)](https://golang.org/)
