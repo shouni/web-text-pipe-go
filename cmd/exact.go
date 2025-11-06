@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/url"
 	"time"
 
 	"github.com/shouni/go-http-kit/pkg/httpkit"
@@ -54,8 +55,11 @@ var exactCmd = &cobra.Command{
 
 		// 1. URLのバリデーション
 		if rawURL == "" {
-			// MarkFlagRequired("url") を使用しているため、通常はcobraが捕捉するが、念のため
 			return fmt.Errorf("エラー: 抽出対象のURL (--url, -u) は必須です")
+		}
+		parsedURL, err := url.Parse(rawURL)
+		if err != nil || parsedURL.Scheme == "" || parsedURL.Host == "" {
+			return fmt.Errorf("エラー: 無効なURL形式です。有効なスキームとホストを含むURLを指定してください: %w", err)
 		}
 
 		// 2. HTTPクライアントの初期化 (root.go のグローバルフラグを使用)
@@ -67,6 +71,8 @@ var exactCmd = &cobra.Command{
 		}
 
 		// 3. 全体実行コンテキストの設定
+		// 単一抽出のため、HTTPクライアントのタイムアウトとコマンド全体のタイムアウトを同じ値とする。
+		// これにより、HTTPリクエストがタイムアウトした場合、直ちにコマンド全体も終了する。
 		ctx, cancel := context.WithTimeout(context.Background(), clientTimeout)
 		defer cancel()
 
