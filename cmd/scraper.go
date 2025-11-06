@@ -6,18 +6,16 @@ import (
 	"log"
 	"time"
 
-	"web-text-pipe-go/pkg/scraperrunner"
-
 	"github.com/shouni/go-cli-base"
 	"github.com/shouni/go-web-exact/v2/pkg/types"
 	"github.com/spf13/cobra"
+	"web-text-pipe-go/pkg/scraperrunner"
 )
 
 // --- ロジック: 結果の出力 (I/O) ---
 
 // printResults は、scraperrunnerから受け取った結果をCLIに出力します。
-// この関数は、CLIアプリケーションのI/O責務を担います。
-func printResults(results []types.URLResult) {
+func printResults(results []types.URLResult, verbose bool) {
 	fmt.Println("\n--- 並列スクレイピング結果 ---")
 	successCount := 0
 	errorCount := 0
@@ -28,8 +26,7 @@ func printResults(results []types.URLResult) {
 			log.Printf("❌ [%d] %s\n     エラー: %v\n", i+1, res.URL, res.Error)
 		} else {
 			successCount++
-			// Verboseフラグが有効な場合のみコンテンツの一部を出力
-			if clibase.Flags.Verbose {
+			if verbose {
 				fmt.Printf("✅ [%d] %s\n     抽出コンテンツの長さ: %d 文字\n     プレビュー: %s...\n",
 					i+1, res.URL, len(res.Content), res.Content[:min(len(res.Content), 50)])
 			} else {
@@ -66,7 +63,7 @@ var scraperCmd = &cobra.Command{
 			OverallTimeoutMultiplier: 2, // クライアントタイムアウトの2倍を全体のタイムアウトとする
 		}
 
-		// 1. コンテキストの定義 (キャンセル機能は runner 側で管理)
+		// 1. コンテキストの定義
 		ctx := context.Background()
 
 		// 2. 新しいパッケージの関数を呼び出し、結果を受け取る
@@ -76,7 +73,7 @@ var scraperCmd = &cobra.Command{
 		}
 
 		// 3. 結果の出力 (I/O責務)
-		printResults(results)
+		printResults(results, clibase.Flags.Verbose)
 
 		return nil
 	},
@@ -86,8 +83,5 @@ var scraperCmd = &cobra.Command{
 
 func initScraperFlags() {
 	scraperCmd.Flags().StringP("url", "u", "https://news.yahoo.co.jp/rss/categories/it.xml", "解析対象のフィードURL (RSS/Atom)")
-
-	scraperCmd.Flags().IntP("concurrency", "c",
-		5,
-		"最大並列実行数 (デフォルト: 5)")
+	scraperCmd.Flags().IntP("concurrency", "c", 5, "最大並列実行数 (デフォルト: 5)")
 }
