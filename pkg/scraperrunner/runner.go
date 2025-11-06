@@ -48,7 +48,11 @@ func ScrapeAndRun(ctx context.Context, config RunnerConfig) ([]types.URLResult, 
 	)
 	rssFeed, err := parser.FetchAndParse(runCtx, config.FeedURL)
 	if err != nil {
-		// ログは呼び出し元 (cmd/scraper.go) で処理されるため、ここではエラーを返します。
+		slog.Error(
+			"フィードの処理エラーが発生しました",
+			slog.Any("error", err),
+			slog.String("feed_url", config.FeedURL),
+		)
 		return nil, fmt.Errorf("フィードの処理エラー: %w", err)
 	}
 

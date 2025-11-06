@@ -83,5 +83,5 @@ var scraperCmd = &cobra.Command{
 
 func initScraperFlags() {
 	scraperCmd.Flags().StringP("url", "u", "https://news.yahoo.co.jp/rss/categories/it.xml", "解析対象のフィードURL (RSS/Atom)")
-	scraperCmd.Flags().IntP("concurrency", "c", scraperrunner.DefaultMaxConcurrency, "最大並列実行数 (デフォルト: 5)")
+	scraperCmd.Flags().IntP("concurrency", "c", scraperrunner.DefaultMaxConcurrency, "最大並列実行数")
 }
