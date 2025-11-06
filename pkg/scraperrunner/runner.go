@@ -3,7 +3,7 @@ package scraperrunner
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/shouni/go-http-kit/pkg/httpkit"
@@ -12,6 +12,8 @@ import (
 	"github.com/shouni/go-web-exact/v2/pkg/scraper"
 	"github.com/shouni/go-web-exact/v2/pkg/types"
 )
+
+const DefaultMaxConcurrency = scraper.DefaultMaxConcurrency
 
 // --- 構造体 ---
 
@@ -28,9 +30,6 @@ type RunnerConfig struct {
 func ScrapeAndRun(ctx context.Context, config RunnerConfig) ([]types.URLResult, error) {
 	// 1. HTTPクライアントの初期化 (extract.Fetcher を満たす)
 	fetcher := httpkit.New(config.ClientTimeout)
-	if fetcher == nil {
-		return nil, fmt.Errorf("HTTPクライアントの初期化に失敗しました")
-	}
 
 	// 2. フィード解析器の初期化
 	parser := feed.NewParser(fetcher)
@@ -42,9 +41,14 @@ func ScrapeAndRun(ctx context.Context, config RunnerConfig) ([]types.URLResult, 
 	defer cancel()
 
 	// 4. フィードの取得とパースを実行
-	log.Printf("フィードURLを解析中 (全体タイムアウト: %s): %s\n", overallTimeout, config.FeedURL)
+	slog.Info(
+		"フィードURLを解析中",
+		slog.Duration("overall_timeout", overallTimeout),
+		slog.String("feed_url", config.FeedURL),
+	)
 	rssFeed, err := parser.FetchAndParse(runCtx, config.FeedURL)
 	if err != nil {
+		// ログは呼び出し元 (cmd/scraper.go) で処理されるため、ここではエラーを返します。
 		return nil, fmt.Errorf("フィードの処理エラー: %w", err)
 	}
 
@@ -52,7 +56,10 @@ func ScrapeAndRun(ctx context.Context, config RunnerConfig) ([]types.URLResult, 
 	adapter := feed.NewFeedAdapter(rssFeed)
 	urls := adapter.GetLinks()
 
-	log.Printf("フィードから %d 件のURLを抽出しました。\n", len(urls))
+	slog.Info(
+		"フィードからURLを抽出",
+		slog.Int("extracted_count", len(urls)),
+	)
 
 	if len(urls) == 0 {
 		return nil, fmt.Errorf("フィード (%s) から処理対象のURLが一つも抽出されませんでした", config.FeedURL)
@@ -65,20 +72,21 @@ func ScrapeAndRun(ctx context.Context, config RunnerConfig) ([]types.URLResult, 
 // runPipeline は、Webスクレイピングの並列実行ロジックのみを担当します。
 func runPipeline(ctx context.Context, urls []string, fetcher *httpkit.Client, concurrency int) ([]types.URLResult, error) {
 	// 1. Extractor の初期化
-	// *httpkit.Client は extract.Fetcher インターフェースを満たすことを利用
 	extractor, err := extract.NewExtractor(fetcher)
 	if err != nil {
 		return nil, fmt.Errorf("Extractorの初期化エラー: %w", err)
 	}
 
 	// 2. Scraper の初期化
-	// ここでは、並列処理ロジックが統合された pkg/scraper を使用することを想定
 	parallelScraper := scraper.NewParallelScraper(extractor, concurrency)
 
-	log.Printf("並列スクレイピング実行中... (最大同時実行数: %d)", concurrency)
+	slog.Info(
+		"並列スクレイピング実行中",
+		slog.Int("concurrency", concurrency),
+		slog.Int("total_urls", len(urls)),
+	)
 
 	// 3. メインロジックの実行
-	// 実行結果を直接呼び出し元に返します
 	results := parallelScraper.ScrapeInParallel(ctx, urls)
 
 	return results, nil
