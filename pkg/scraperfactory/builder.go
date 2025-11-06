@@ -17,9 +17,6 @@ import (
 func BuildScraperRunner(clientTimeout time.Duration, concurrency int) (*scraperrunner.Runner, error) {
 	// 1. HTTP クライアント (Fetcher)
 	fetcher := httpkit.New(clientTimeout)
-	if fetcher == nil {
-		return nil, fmt.Errorf("HTTPクライアントの初期化に失敗しました")
-	}
 
 	// 2. FeedParser の具体的な実装
 	parser := feed.NewParser(fetcher)
