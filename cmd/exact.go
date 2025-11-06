@@ -58,11 +58,7 @@ var exactCmd = &cobra.Command{
 
 		// 2. HTTPクライアントの初期化 (root.go のグローバルフラグを使用)
 		clientTimeout := time.Duration(Flags.TimeoutSec) * time.Second
-		// httpkit.New にタイムアウトを渡す
 		fetcher := httpkit.New(clientTimeout)
-		if fetcher == nil {
-			return fmt.Errorf("HTTPクライアントの初期化に失敗しました")
-		}
 
 		// 3. 全体実行コンテキストの設定
 		// 単一抽出のため、クライアントタイムアウトと同じ値を全体タイムアウトとする

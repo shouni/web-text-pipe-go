@@ -121,12 +121,8 @@ var scraperCmd = &cobra.Command{
 
 // initScraperFlags は、scraperCmdのフラグを設定し、root.goから呼び出されます。
 func initScraperFlags() {
-	scraperCmd.Flags().StringVarP(&feedURL, "url", "u",
-		"https://news.yahoo.co.jp/rss/categories/it.xml",
-		"解析対象のフィードURL (RSS/Atom)")
-	scraperCmd.Flags().IntVarP(&concurrency, "concurrency", "c",
-		scraper.DefaultMaxConcurrency,
-		fmt.Sprintf("最大並列実行数"))
+	scraperCmd.Flags().StringVarP(&feedURL, "url", "u", "https://news.yahoo.co.jp/rss/categories/it.xml", "解析対象のフィードURL (RSS/Atom)")
+	scraperCmd.Flags().IntVarP(&concurrency, "concurrency", "c", scraper.DefaultMaxConcurrency, fmt.Sprintf("最大並列実行数"))
 }
 
 // ユーティリティ関数（Go 1.21未満の互換性のため）
