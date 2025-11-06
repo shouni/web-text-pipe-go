@@ -68,8 +68,11 @@ var scraperCmd = &cobra.Command{
 		parser := feed.NewParser(fetcher)
 
 		// 3. ScraperExecutor の具体的な実装 (ここで Concurrency を渡す)
-		extractor, _ := extract.NewExtractor(fetcher)
-		scraperExecutor := scraper.NewParallelScraper(extractor, concurrency) // concurrency をここで使う
+		extractor, err := extract.NewExtractor(fetcher)
+		if err != nil {
+			return fmt.Errorf("Extractorの初期化エラー: %w", err)
+		}
+		scraperExecutor := scraper.NewParallelScraper(extractor, concurrency)
 
 		// 4. Runner の初期化（依存関係を注入）
 		runner := scraperrunner.NewRunner(parser, scraperExecutor)
