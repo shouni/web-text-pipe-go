@@ -51,9 +51,6 @@ func printResults(results []types.URLResult, verbose bool) {
 func newScraperRunner(clientTimeout time.Duration, concurrency int) (*scraperrunner.Runner, error) {
 	// 1. 依存関係の構築に必要な HTTP クライアント
 	fetcher := httpkit.New(clientTimeout)
-	if fetcher == nil {
-		return nil, fmt.Errorf("HTTPクライアントの初期化に失敗しました")
-	}
 
 	// 2. FeedParser の具体的な実装 (依存性を注入)
 	parser := feed.NewParser(fetcher)
