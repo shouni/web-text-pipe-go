@@ -5,6 +5,7 @@ go 1.25
 require (
 	github.com/shouni/go-cli-base v1.0.5
 	github.com/shouni/go-http-kit v1.0.6
+	github.com/shouni/go-utils v1.0.7
 	github.com/shouni/go-web-exact/v2 v2.0.8
 	github.com/spf13/cobra v1.10.1
 )
@@ -21,7 +22,6 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
-	github.com/shouni/go-utils v1.0.7 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	golang.org/x/net v0.46.0 // indirect
 	golang.org/x/text v0.30.0 // indirect

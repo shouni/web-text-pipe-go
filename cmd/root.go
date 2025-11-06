@@ -62,9 +62,9 @@ func initAppPreRunE(cmd *cobra.Command, args []string) error {
 }
 
 // initCmdFlags は、すべてのサブコマンドのフラグを初期化します。
-// ※ サブコマンドのファイル (例: scraper.go) でこの関数を定義/呼び出す必要があります。
 func initCmdFlags() {
 	initScraperFlags()
+	initExactFlags()
 }
 
 // --- エントリポイント ---
@@ -80,6 +80,7 @@ func Execute() {
 		appName,
 		addAppPersistentFlags, // カスタムフラグの追加コールバック
 		initAppPreRunE,        // カスタムPersistentPreRunEコールバック
-		scraperCmd,            // scraperCmd を追加
+		scraperCmd,
+		exactCmd,
 	)
 }

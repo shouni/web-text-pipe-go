@@ -79,11 +79,7 @@ var scraperCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// 1. HTTPクライアントの初期化 (root.go のグローバルフラグを使用)
 		clientTimeout := time.Duration(Flags.TimeoutSec) * time.Second
-		// 修正: httpkit.New が time.Duration を引数に取るように修正 (ビルドエラーの解消)
 		fetcher := httpkit.New(clientTimeout)
-		if fetcher == nil {
-			return fmt.Errorf("HTTPクライアントの初期化に失敗しました")
-		}
 
 		// 2. フィード解析器の初期化
 		parser := feed.NewParser(fetcher)
@@ -122,12 +118,7 @@ var scraperCmd = &cobra.Command{
 // initScraperFlags は、scraperCmdのフラグを設定し、root.goから呼び出されます。
 func initScraperFlags() {
 	scraperCmd.Flags().StringVarP(&feedURL, "url", "u", "https://news.yahoo.co.jp/rss/categories/it.xml", "解析対象のフィードURL (RSS/Atom)")
-
-	// --concurrency フラグ: 並列実行数の指定
-	// scraper.DefaultMaxConcurrency の定義を想定
-	scraperCmd.Flags().IntVarP(&concurrency, "concurrency", "c",
-		5, // デフォルト値は5と仮定 (scraper.DefaultMaxConcurrencyが未定義の場合)
-		fmt.Sprintf("最大並列実行数 (デフォルト: 5)"))
+	scraperCmd.Flags().IntVarP(&concurrency, "concurrency", "c", scraper.DefaultMaxConcurrency, fmt.Sprintf("最大並列実行数"))
 }
 
 // ユーティリティ関数（Go 1.21未満の互換性のため）
