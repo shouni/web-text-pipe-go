@@ -9,12 +9,11 @@ import (
 	"github.com/mmcdole/gofeed"
 
 	"github.com/shouni/go-web-exact/v2/pkg/feed"
-	"github.com/shouni/go-web-exact/v2/pkg/scraper"
 	"github.com/shouni/go-web-exact/v2/pkg/types"
 )
 
 // DefaultMaxConcurrency は、pkg/scraper の定数を公開するために使用
-const DefaultMaxConcurrency = scraper.DefaultMaxConcurrency
+const DefaultMaxConcurrency = 6
 
 // FeedParser はフィードを取得し、パースする責務を持つインターフェース
 type FeedParser interface {
