@@ -6,10 +6,15 @@ import (
 	"log"
 	"time"
 
+	"web-text-pipe-go/pkg/scraperrunner"
+
 	"github.com/shouni/go-cli-base"
+	"github.com/shouni/go-http-kit/pkg/httpkit"
+	"github.com/shouni/go-web-exact/v2/pkg/extract"
+	"github.com/shouni/go-web-exact/v2/pkg/feed"
+	"github.com/shouni/go-web-exact/v2/pkg/scraper"
 	"github.com/shouni/go-web-exact/v2/pkg/types"
 	"github.com/spf13/cobra"
-	"web-text-pipe-go/pkg/scraperrunner"
 )
 
 // --- ロジック: 結果の出力 (I/O) ---
@@ -56,18 +61,30 @@ var scraperCmd = &cobra.Command{
 		// root.go からのグローバルフラグを使用し、設定を構築
 		clientTimeout := time.Duration(Flags.TimeoutSec) * time.Second
 
+		// 1. 依存関係の構築に必要な HTTP クライアント
+		fetcher := httpkit.New(clientTimeout)
+
+		// 2. FeedParser の具体的な実装
+		parser := feed.NewParser(fetcher)
+
+		// 3. ScraperExecutor の具体的な実装 (ここで Concurrency を渡す)
+		extractor, err := extract.NewExtractor(fetcher)
+		if err != nil {
+			return fmt.Errorf("Extractorの初期化エラー: %w", err)
+		}
+		scraperExecutor := scraper.NewParallelScraper(extractor, concurrency)
+
+		// 4. Runner の初期化（依存関係を注入）
+		runner := scraperrunner.NewRunner(parser, scraperExecutor)
+
+		// 5. ScrapeAndRun の呼び出し（Concurrency を RunnerConfig から削除）
+		ctx := context.Background()
 		config := scraperrunner.RunnerConfig{
 			FeedURL:                  feedURL,
-			Concurrency:              concurrency,
 			ClientTimeout:            clientTimeout,
-			OverallTimeoutMultiplier: 2, // クライアントタイムアウトの2倍を全体のタイムアウトとする
+			OverallTimeoutMultiplier: 2,
 		}
-
-		// 1. コンテキストの定義
-		ctx := context.Background()
-
-		// 2. 新しいパッケージの関数を呼び出し、結果を受け取る
-		results, err := scraperrunner.ScrapeAndRun(ctx, config)
+		results, err := runner.ScrapeAndRun(ctx, config)
 		if err != nil {
 			return err // エラーの場合は即座に返す
 		}
