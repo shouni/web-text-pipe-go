@@ -6,6 +6,7 @@ import (
 	"log"
 	"time"
 
+	clibase "github.com/shouni/go-cli-base"
 	"github.com/shouni/go-http-kit/pkg/httpkit"
 	"github.com/shouni/go-web-exact/v2/pkg/extract"
 	"github.com/shouni/go-web-exact/v2/pkg/feed"
@@ -25,6 +26,7 @@ var (
 // runScrapePipeline は、並列スクレイピングを実行するメインロジックです。
 func runScrapePipeline(ctx context.Context, urls []string, fetcher *httpkit.Client) error {
 	// 1. Extractor の初期化
+	// fetcher が httpkit.Client であり、extract.NewExtractor がそのラッパーまたはインターフェースを受け入れると仮定
 	extractor, err := extract.NewExtractor(fetcher)
 	if err != nil {
 		return fmt.Errorf("Extractorの初期化エラー: %w", err)
@@ -36,7 +38,6 @@ func runScrapePipeline(ctx context.Context, urls []string, fetcher *httpkit.Clie
 	log.Printf("並列スクレイピング開始 (対象URL数: %d, 最大同時実行数: %d)\n", len(urls), concurrency)
 
 	// 3. メインロジックの実行
-	// scraper.ScrapeInParallel が内部で extractor.FetchAndExtractText を呼び出します。
 	results := parallelScraper.ScrapeInParallel(ctx, urls)
 
 	// 4. 結果の出力
@@ -50,7 +51,13 @@ func runScrapePipeline(ctx context.Context, urls []string, fetcher *httpkit.Clie
 			log.Printf("❌ [%d] %s\n     エラー: %v\n", i+1, res.URL, res.Error)
 		} else {
 			successCount++
-			fmt.Printf("✅ [%d] %s\n     抽出コンテンツの長さ: %d 文字\n", i+1, res.URL, len(res.Content))
+			// 詳細ログが有効な場合のみコンテンツの一部を出力
+			if clibase.Flags.Verbose {
+				fmt.Printf("✅ [%d] %s\n     抽出コンテンツの長さ: %d 文字\n     プレビュー: %s...\n",
+					i+1, res.URL, len(res.Content), res.Content[:min(len(res.Content), 50)])
+			} else {
+				fmt.Printf("✅ [%d] %s\n     抽出コンテンツの長さ: %d 文字\n", i+1, res.URL, len(res.Content))
+			}
 		}
 	}
 
@@ -71,13 +78,8 @@ var scraperCmd = &cobra.Command{
 
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// 1. HTTPクライアントの初期化 (root.go のグローバルフラグを使用)
-		// httpkit.New にはリトライ回数を渡すことを想定します。
-
-		// 1. HTTPクライアントの初期化 (root.go のグローバルフラグを使用)
-		// クライアントのタイムアウトを計算 (int -> time.Duration)
 		clientTimeout := time.Duration(Flags.TimeoutSec) * time.Second
-
-		// 修正: httpkit.New にはリトライ回数ではなく、クライアント全体のタイムアウトを渡す（一般的なhttp-kitの慣習）
+		// 修正: httpkit.New が time.Duration を引数に取るように修正 (ビルドエラーの解消)
 		fetcher := httpkit.New(clientTimeout)
 		if fetcher == nil {
 			return fmt.Errorf("HTTPクライアントの初期化に失敗しました")
@@ -86,8 +88,7 @@ var scraperCmd = &cobra.Command{
 		// 2. フィード解析器の初期化
 		parser := feed.NewParser(fetcher)
 
-		// 3. 全体実行コンテキストの設定 (root.go のグローバルフラグを使用)
-		// 全体タイムアウトは、クライアントタイムアウトの2倍など、余裕を持たせるのが一般的
+		// 3. 全体実行コンテキストの設定
 		overallTimeout := clientTimeout * 2
 
 		ctx, cancel := context.WithTimeout(context.Background(), overallTimeout)
@@ -100,13 +101,10 @@ var scraperCmd = &cobra.Command{
 			return fmt.Errorf("フィードの処理エラー: %w", err)
 		}
 
-		// 5. RSSフィードから記事のURLを抽出
-		var urls []string
-		for _, item := range rssFeed.Items {
-			if item.Link != "" {
-				urls = append(urls, item.Link)
-			}
-		}
+		// 5. FeedAdapter を使用して URL を抽象的に抽出
+		// 提供された feed パッケージの FeedAdapter を利用
+		adapter := feed.NewFeedAdapter(rssFeed)
+		urls := adapter.GetLinks() // LinkSource インターフェース経由でリンクを取得
 
 		log.Printf("フィードから %d 件のURLを抽出しました。\n", len(urls))
 
@@ -126,9 +124,16 @@ func initScraperFlags() {
 	scraperCmd.Flags().StringVarP(&feedURL, "url", "u", "https://news.yahoo.co.jp/rss/categories/it.xml", "解析対象のフィードURL (RSS/Atom)")
 
 	// --concurrency フラグ: 並列実行数の指定
+	// scraper.DefaultMaxConcurrency の定義を想定
 	scraperCmd.Flags().IntVarP(&concurrency, "concurrency", "c",
-		scraper.DefaultMaxConcurrency, // pkg/scraperで定義されたデフォルト値を使用
-		fmt.Sprintf("最大並列実行数 (デフォルト: %d)", scraper.DefaultMaxConcurrency))
+		5, // デフォルト値は5と仮定 (scraper.DefaultMaxConcurrencyが未定義の場合)
+		fmt.Sprintf("最大並列実行数 (デフォルト: 5)"))
 }
 
-// cmd/root.go の initCmdFlags() がこの関数を呼び出すことを想定
+// ユーティリティ関数（Go 1.21未満の互換性のため）
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}

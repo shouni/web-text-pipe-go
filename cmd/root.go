@@ -49,7 +49,6 @@ func addAppPersistentFlags(rootCmd *cobra.Command) {
 // clibaseの共通処理の後に実行されます。
 // NOTE: clibase.Flags.Verbose はこの関数実行前に設定済み
 func initAppPreRunE(cmd *cobra.Command, args []string) error {
-	// 💡 以前のプロジェクトで発生したタイムアウト単位の問題を修正済み
 	timeout := time.Duration(Flags.TimeoutSec) * time.Second
 
 	// clibase.Flags の利用
@@ -81,8 +80,6 @@ func Execute() {
 		appName,
 		addAppPersistentFlags, // カスタムフラグの追加コールバック
 		initAppPreRunE,        // カスタムPersistentPreRunEコールバック
-		// ⚠️ 注意: ここにサブコマンド (例: scraperCmd) を追加する必要があります。
-		// scraperCmd が未定義のため、一旦コメントアウトまたは適切なサブコマンドに置き換える必要があります。
-		// scraperCmd,
+		scraperCmd,            // scraperCmd を追加
 	)
 }
