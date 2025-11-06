@@ -12,26 +12,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// --- コマンドラインフラグ変数 ---
-
-var (
-	rawURL     string // --url (-u) で受け取る抽出対象の単一URL
-	outputFile string // --output-file (-o) で受け取る出力ファイル名
-)
-
 // --- メインロジック ---
 
 // runExactExtraction は、単一URLからの抽出を実行するロジックです。
-func runExactExtraction(ctx context.Context, fetcher *httpkit.Client, url string) (text string, isBodyExtracted bool, err error) {
+// 💡 修正: fetcherの型を具体的な型 (*httpkit.Client) からインターフェース (extract.Fetcher) に変更。
+func runExactExtraction(ctx context.Context, fetcher extract.Fetcher, url string) (text string, isBodyExtracted bool, err error) {
 	// 1. Extractor の初期化
-	// fetcher は httpkit.Client であり、extract.Fetcher インターフェースを満たす
+	// Extractor は内部で extract.Fetcher に依存するため、引数として受け取った fetcher をそのまま渡す。
 	extractor, err := extract.NewExtractor(fetcher)
 	if err != nil {
 		return "", false, fmt.Errorf("Extractorの初期化エラー: %w", err)
 	}
 
 	// 2. 抽出の実行
-	// runAudioQuery のようなラッパー関数は省略し、直接 FetchAndExtractText を呼び出す
 	text, isBodyExtracted, err = extractor.FetchAndExtractText(ctx, url)
 	if err != nil {
 		// エラーのラッピング
@@ -51,23 +44,36 @@ var exactCmd = &cobra.Command{
 	Args: cobra.NoArgs,
 
 	RunE: func(cmd *cobra.Command, args []string) error {
+
+		var rawURL string
+		var outputFile string
+
+		// 実行前にフラグ値を取得（cobraのライフサイクルで設定されている）
+		rawURL, _ = cmd.Flags().GetString("url")
+		outputFile, _ = cmd.Flags().GetString("output-file")
+
 		// 1. URLのバリデーション
 		if rawURL == "" {
+			// MarkFlagRequired("url") を使用しているため、通常はcobraが捕捉するが、念のため
 			return fmt.Errorf("エラー: 抽出対象のURL (--url, -u) は必須です")
 		}
 
 		// 2. HTTPクライアントの初期化 (root.go のグローバルフラグを使用)
 		clientTimeout := time.Duration(Flags.TimeoutSec) * time.Second
+		// httpkit.New の戻り値は *httpkit.Client であり、これが extract.Fetcher インターフェースを満たす。
 		fetcher := httpkit.New(clientTimeout)
+		if fetcher == nil {
+			return fmt.Errorf("HTTPクライアントの初期化に失敗しました")
+		}
 
 		// 3. 全体実行コンテキストの設定
-		// 単一抽出のため、クライアントタイムアウトと同じ値を全体タイムアウトとする
 		ctx, cancel := context.WithTimeout(context.Background(), clientTimeout)
 		defer cancel()
 
 		log.Printf("抽出処理開始 (URL: %s, タイムアウト: %s)\n", rawURL, clientTimeout)
 
 		// 4. メインロジックの実行
+		// fetcher (*httpkit.Client) は runExactExtraction が要求する extract.Fetcher インターフェースを満たすため、型変換なしで渡せる。
 		text, isBodyExtracted, err := runExactExtraction(ctx, fetcher, rawURL)
 		if err != nil {
 			return fmt.Errorf("コンテンツ抽出パイプラインの実行エラー: %w", err)
@@ -76,23 +82,27 @@ var exactCmd = &cobra.Command{
 		// 5. 結果の出力
 		if !isBodyExtracted {
 			log.Println("--- 本文抽出失敗 ---")
-			log.Printf("本文は見つかりませんでしたが、取得したタイトル/メタ情報は以下です:\n%s\n", text)
+			// 💡 修正: テキストが空でなければ、タイトル/メタ情報として出力
+			if text != "" {
+				log.Printf("本文は見つかりませんでしたが、以下の情報が抽出されました:\n%s\n", text)
+			} else {
+				log.Println("本文、タイトル、メタ情報のいずれも抽出されませんでした。")
+			}
 			return nil
 		}
 
-		// 以前記憶した iohandler パッケージを使用して出力
+		// iohandler パッケージを使用して出力
 		return iohandler.WriteOutputString(outputFile, text)
 	},
 }
 
 // --- フラグ初期化 ---
 
-// initExactFlags は、exactCmdのフラグを設定し、root.goから呼び出されます。
+// 💡 修正: フラグ変数を削除し、cobraの関数に直接渡すように変更
 func initExactFlags() {
-	// --url フラグ: 抽出対象URL（必須）
-	exactCmd.Flags().StringVarP(&rawURL, "url", "u", "", "抽出対象の単一WebページURL (必須)")
-	// --output-file フラグ: 出力ファイル名
-	exactCmd.Flags().StringVarP(&outputFile, "output-file", "o", "", "抽出されたテキストを保存するファイル名。省略時は標準出力に出力。")
+	// フラグ変数をパッケージレベルから削除したため、RunEで値を取得できるように、Flags()を直接操作する。
+	exactCmd.Flags().StringP("url", "u", "", "抽出対象の単一WebページURL (必須)")
+	exactCmd.Flags().StringP("output-file", "o", "", "抽出されたテキストを保存するファイル名。省略時は標準出力に出力。")
 
 	// URLフラグを必須に設定
 	exactCmd.MarkFlagRequired("url")
