@@ -16,7 +16,6 @@ import (
 // --- メインロジック ---
 
 // runExactExtraction は、単一URLからの抽出を実行するロジックです。
-// 💡 修正: fetcherの型を具体的な型 (*httpkit.Client) からインターフェース (extract.Fetcher) に変更。
 func runExactExtraction(ctx context.Context, fetcher extract.Fetcher, url string) (text string, isBodyExtracted bool, err error) {
 	// 1. Extractor の初期化
 	// Extractor は内部で extract.Fetcher に依存するため、引数として受け取った fetcher をそのまま渡す。
@@ -66,9 +65,6 @@ var exactCmd = &cobra.Command{
 		clientTimeout := time.Duration(Flags.TimeoutSec) * time.Second
 		// httpkit.New の戻り値は *httpkit.Client であり、これが extract.Fetcher インターフェースを満たす。
 		fetcher := httpkit.New(clientTimeout)
-		if fetcher == nil {
-			return fmt.Errorf("HTTPクライアントの初期化に失敗しました")
-		}
 
 		// 3. 全体実行コンテキストの設定
 		// 単一抽出のため、HTTPクライアントのタイムアウトとコマンド全体のタイムアウトを同じ値とする。
@@ -88,7 +84,6 @@ var exactCmd = &cobra.Command{
 		// 5. 結果の出力
 		if !isBodyExtracted {
 			log.Println("--- 本文抽出失敗 ---")
-			// 💡 修正: テキストが空でなければ、タイトル/メタ情報として出力
 			if text != "" {
 				log.Printf("本文は見つかりませんでしたが、以下の情報が抽出されました:\n%s\n", text)
 			} else {
@@ -104,7 +99,6 @@ var exactCmd = &cobra.Command{
 
 // --- フラグ初期化 ---
 
-// 💡 修正: フラグ変数を削除し、cobraの関数に直接渡すように変更
 func initExactFlags() {
 	// フラグ変数をパッケージレベルから削除したため、RunEで値を取得できるように、Flags()を直接操作する。
 	exactCmd.Flags().StringP("url", "u", "", "抽出対象の単一WebページURL (必須)")

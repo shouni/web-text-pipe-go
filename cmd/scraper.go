@@ -79,11 +79,7 @@ var scraperCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// 1. HTTPクライアントの初期化 (root.go のグローバルフラグを使用)
 		clientTimeout := time.Duration(Flags.TimeoutSec) * time.Second
-		// 修正: httpkit.New が time.Duration を引数に取るように修正 (ビルドエラーの解消)
 		fetcher := httpkit.New(clientTimeout)
-		if fetcher == nil {
-			return fmt.Errorf("HTTPクライアントの初期化に失敗しました")
-		}
 
 		// 2. フィード解析器の初期化
 		parser := feed.NewParser(fetcher)
