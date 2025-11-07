@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"web-text-pipe-go/pkg/scraper/runner"
+	"github.com/shouni/web-text-pipe-go/pkg/scraper/runner"
 
 	"github.com/shouni/go-http-kit/pkg/httpkit"
 	"github.com/shouni/go-web-exact/v2/pkg/extract"

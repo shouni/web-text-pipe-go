@@ -6,8 +6,8 @@ import (
 	"log"
 	"time"
 
-	"web-text-pipe-go/pkg/scraper/builder"
-	"web-text-pipe-go/pkg/scraper/runner"
+	"github.com/shouni/web-text-pipe-go/pkg/scraper/builder"
+	"github.com/shouni/web-text-pipe-go/pkg/scraper/runner"
 
 	"github.com/shouni/go-cli-base"
 	"github.com/shouni/go-web-exact/v2/pkg/types"
