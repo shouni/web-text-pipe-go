@@ -1,4 +1,4 @@
-package scraperrunner
+package runner
 
 import (
 	"context"

@@ -6,8 +6,8 @@ import (
 	"log"
 	"time"
 
-	"web-text-pipe-go/pkg/scraperfactory" // 💡 factory から scraperfactory に変更
-	"web-text-pipe-go/pkg/scraperrunner"
+	"web-text-pipe-go/pkg/scraper/builder"
+	"web-text-pipe-go/pkg/scraper/runner"
 
 	"github.com/shouni/go-cli-base"
 	"github.com/shouni/go-web-exact/v2/pkg/types"
@@ -16,7 +16,7 @@ import (
 
 // --- ロジック: 結果の出力 (I/O) ---
 
-// printResults は、scraperrunnerから受け取った結果をCLIに出力します。
+// printResults は、runnerから受け取った結果をCLIに出力します。
 func printResults(results []types.URLResult, verbose bool) {
 	fmt.Println("\n--- 並列スクレイピング結果 ---")
 	successCount := 0
@@ -56,22 +56,22 @@ var scraperCmd = &cobra.Command{
 		concurrency, _ := cmd.Flags().GetInt("concurrency")
 		clientTimeout := time.Duration(Flags.TimeoutSec) * time.Second
 
-		// 2. scraperfactory パッケージのファクトリ関数を呼び出し、Runnerを取得
-		runner, err := scraperfactory.BuildScraperRunner(clientTimeout, concurrency)
+		// 2. Runnerを取得
+		runnerInstance, err := builder.BuildScraperRunner(clientTimeout, concurrency)
 		if err != nil {
 			return err
 		}
 
 		// 3. 実行コンテキストと設定の準備
 		ctx := context.Background()
-		config := scraperrunner.RunnerConfig{
+		config := runner.RunnerConfig{
 			FeedURL:                  feedURL,
 			ClientTimeout:            clientTimeout,
 			OverallTimeoutMultiplier: 2,
 		}
 
 		// 4. ScrapeAndRun の呼び出し
-		results, err := runner.ScrapeAndRun(ctx, config)
+		results, err := runnerInstance.ScrapeAndRun(ctx, config) // 変更後の変数名を使用
 		if err != nil {
 			return err
 		}
@@ -86,6 +86,7 @@ var scraperCmd = &cobra.Command{
 // --- フラグ初期化 ---
 
 func initScraperFlags() {
+	// runner.DefaultMaxConcurrency は以前記憶した runner パッケージでエクスポートされています
 	scraperCmd.Flags().StringP("url", "u", "https://news.yahoo.co.jp/rss/categories/it.xml", "解析対象のフィードURL (RSS/Atom)")
-	scraperCmd.Flags().IntP("concurrency", "c", scraperrunner.DefaultMaxConcurrency, "最大並列実行数 (デフォルト: 6)")
+	scraperCmd.Flags().IntP("concurrency", "c", runner.DefaultMaxConcurrency, "最大並列実行数 (デフォルト: 6)")
 }
