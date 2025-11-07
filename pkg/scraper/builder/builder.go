@@ -1,10 +1,10 @@
-package scraperfactory
+package builder
 
 import (
 	"fmt"
 	"time"
 
-	"web-text-pipe-go/pkg/scraperrunner"
+	"web-text-pipe-go/pkg/scraper/runner"
 
 	"github.com/shouni/go-http-kit/pkg/httpkit"
 	"github.com/shouni/go-web-exact/v2/pkg/extract"
@@ -12,9 +12,9 @@ import (
 	"github.com/shouni/go-web-exact/v2/pkg/scraper"
 )
 
-// BuildScraperRunner は、必要な設定値に基づいて、scraperrunner.Runnerの依存関係をすべて構築し、
+// BuildScraperRunner は、必要な設定値に基づいて、runner.Runnerの依存関係をすべて構築し、
 // Runnerインスタンスを返します。
-func BuildScraperRunner(clientTimeout time.Duration, concurrency int) (*scraperrunner.Runner, error) {
+func BuildScraperRunner(clientTimeout time.Duration, concurrency int) (*runner.Runner, error) {
 	// 1. HTTP クライアント (Fetcher)
 	fetcher := httpkit.New(clientTimeout)
 
@@ -29,5 +29,5 @@ func BuildScraperRunner(clientTimeout time.Duration, concurrency int) (*scraperr
 	scraperExecutor := scraper.NewParallelScraper(extractor, concurrency)
 
 	// 4. Runner の初期化（依存関係を注入）
-	return scraperrunner.NewRunner(parser, scraperExecutor), nil
+	return runner.NewRunner(parser, scraperExecutor), nil
 }
