@@ -1,4 +1,5 @@
-module web-text-pipe-go
+module github.com/shouni/web-text-pipe-go
+
 
 go 1.25
 
