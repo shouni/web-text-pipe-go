@@ -48,9 +48,16 @@ type RunnerConfig struct {
 	OverallTimeoutMultiplier int // 全体タイムアウト倍率 (例: 2)
 }
 
+// RunnerResult は ScrapeAndRun の実行結果とメタデータを保持します。
+type RunnerResult struct {
+	FeedTitle        string
+	Results          []types.URLResult
+	ArticleTitlesMap map[string]string // URLをキー、記事タイトルを値とするマップ
+}
+
 // ScrapeAndRun は、フィードの解析から並列スクレイピングまでの一連の処理を実行し、
-// 結果データとエラーを返します。
-func (r *Runner) ScrapeAndRun(ctx context.Context, config RunnerConfig) ([]types.URLResult, error) {
+// 結果データとメタデータを RunnerResult として返します。
+func (r *Runner) ScrapeAndRun(ctx context.Context, config RunnerConfig) (*RunnerResult, error) {
 
 	overallTimeout := config.ClientTimeout * time.Duration(config.OverallTimeoutMultiplier)
 
@@ -64,6 +71,7 @@ func (r *Runner) ScrapeAndRun(ctx context.Context, config RunnerConfig) ([]types
 		slog.String("feed_url", config.FeedURL),
 	)
 
+	// rssFeed は *gofeed.Feed 型
 	rssFeed, err := r.FeedParser.FetchAndParse(runCtx, config.FeedURL)
 	if err != nil {
 		slog.Error(
@@ -74,9 +82,20 @@ func (r *Runner) ScrapeAndRun(ctx context.Context, config RunnerConfig) ([]types
 		return nil, fmt.Errorf("フィードの処理エラー: %w", err)
 	}
 
-	// 3. URLを抽出
+	// 3. URLとタイトルの抽出とマップの構築
 	adapter := feed.NewFeedAdapter(rssFeed)
+
+	// URL抽出
 	urls := adapter.GetLinks()
+
+	// タイトルマップ構築 (修正箇所: adapter.GetItems() の代わりに rssFeed.Items を直接使用)
+	articleTitlesMap := make(map[string]string)
+	feedItems := rssFeed.Items
+	for _, item := range feedItems {
+		if item.Link != "" && item.Title != "" {
+			articleTitlesMap[item.Link] = item.Title
+		}
+	}
 
 	slog.Info(
 		"フィードからURLを抽出",
@@ -93,5 +112,15 @@ func (r *Runner) ScrapeAndRun(ctx context.Context, config RunnerConfig) ([]types
 		slog.Int("total_urls", len(urls)),
 	)
 
-	return r.ScraperExecutor.ScrapeInParallel(runCtx, urls), nil
+	// スクレピング実行
+	results := r.ScraperExecutor.ScrapeInParallel(runCtx, urls)
+
+	// 5. 結果オブジェクトの作成
+	runnerResult := &RunnerResult{
+		FeedTitle:        rssFeed.Title,
+		Results:          results,
+		ArticleTitlesMap: articleTitlesMap,
+	}
+
+	return runnerResult, nil
 }
