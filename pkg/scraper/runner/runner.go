@@ -50,9 +50,9 @@ type RunnerConfig struct {
 
 // RunnerResult は ScrapeAndRun の実行結果とメタデータを保持します。
 type RunnerResult struct {
-	FeedTitle        string
-	Results          []types.URLResult
-	ArticleTitlesMap map[string]string // URLをキー、記事タイトルを値とするマップ
+	FeedTitle string
+	Results   []types.URLResult
+	TitlesMap map[string]string // URLをキー、記事タイトルを値とするマップ
 }
 
 // ScrapeAndRun は、フィードの解析から並列スクレイピングまでの一連の処理を実行し、
@@ -87,15 +87,7 @@ func (r *Runner) ScrapeAndRun(ctx context.Context, config RunnerConfig) (*Runner
 
 	// URL抽出
 	urls := adapter.GetLinks()
-
-	// タイトルマップ構築 (修正箇所: adapter.GetItems() の代わりに rssFeed.Items を直接使用)
-	articleTitlesMap := make(map[string]string)
-	feedItems := rssFeed.Items
-	for _, item := range feedItems {
-		if item.Link != "" && item.Title != "" {
-			articleTitlesMap[item.Link] = item.Title
-		}
-	}
+	titlesMap := adapter.GetTitlesMap()
 
 	slog.Info(
 		"フィードからURLを抽出",
@@ -117,9 +109,9 @@ func (r *Runner) ScrapeAndRun(ctx context.Context, config RunnerConfig) (*Runner
 
 	// 5. 結果オブジェクトの作成
 	runnerResult := &RunnerResult{
-		FeedTitle:        rssFeed.Title,
-		Results:          results,
-		ArticleTitlesMap: articleTitlesMap,
+		FeedTitle: rssFeed.Title,
+		Results:   results,
+		TitlesMap: titlesMap,
 	}
 
 	return runnerResult, nil
