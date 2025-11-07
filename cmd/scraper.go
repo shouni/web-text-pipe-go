@@ -71,13 +71,21 @@ var scraperCmd = &cobra.Command{
 		}
 
 		// 4. ScrapeAndRun の呼び出し
-		results, err := runnerInstance.ScrapeAndRun(ctx, config) // 変更後の変数名を使用
+		// 修正: 戻り値の型を *runner.RunnerResult に変更
+		runnerResult, err := runnerInstance.ScrapeAndRun(ctx, config)
 		if err != nil {
 			return err
 		}
 
+		// 抽出結果の確認
+		if len(runnerResult.Results) == 0 {
+			// runner.ScrapeAndRun が既にエラーチェックをしているはずだが、念のため
+			log.Printf("エラー: スクレピング結果が一つもありませんでした。フィードタイトル: %s\n", runnerResult.FeedTitle)
+		}
+
 		// 5. 結果の出力
-		printResults(results, clibase.Flags.Verbose)
+		// 修正: RunnerResult から Results スライスを取り出して渡す
+		printResults(runnerResult.Results, clibase.Flags.Verbose)
 
 		return nil
 	},
