@@ -13,7 +13,7 @@ import (
 const (
 	appName           = "web-text-pipe"
 	defaultTimeoutSec = 15 // 秒 (並列スクレイピングを考慮して初期値を15秒に設定)
-	defaultMaxRetries = 2  // デフォルトのリトライ回数
+	defaultMaxRetries = 3  // デフォルトのリトライ回数
 )
 
 // --- グローバル変数とフラグ構造体 ---
