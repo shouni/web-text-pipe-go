@@ -13,7 +13,7 @@ import (
 )
 
 // DefaultMaxConcurrency は、pkg/scraper の定数を公開するために使用
-const DefaultMaxConcurrency = 6
+const DefaultMaxConcurrency = 10
 
 // FeedParser はフィードを取得し、パースする責務を持つインターフェース
 type FeedParser interface {
@@ -45,7 +45,7 @@ func NewRunner(parser FeedParser, scraperExecutor ScraperExecutor) *Runner {
 type RunnerConfig struct {
 	FeedURL                  string
 	ClientTimeout            time.Duration
-	OverallTimeoutMultiplier int // 全体タイムアウト倍率 (例: 2)
+	OverallTimeoutMultiplier int
 }
 
 // RunnerResult は ScrapeAndRun の実行結果とメタデータを保持します。
