@@ -116,3 +116,32 @@ func (r *Runner) ScrapeAndRun(ctx context.Context, config RunnerConfig) (*Runner
 
 	return runnerResult, nil
 }
+
+// ExecuteFromURLs は、フィード解析を経由せず、指定されたURLの配列に対して
+// 直接並列スクレイピングを実行します。
+// RunnerResult を返すために、フィードタイトルは空、TitlesMap は nil となります。
+func (r *Runner) ExecuteFromURLs(ctx context.Context, urls []string) (*RunnerResult, error) {
+
+	if len(urls) == 0 {
+		return nil, fmt.Errorf("処理対象のURLが一つも指定されていません")
+	}
+
+	slog.Info(
+		"URL配列からの並列スクレイピング実行中",
+		slog.Int("total_urls", len(urls)),
+	)
+
+	// 並列スクレイピング実行 (r.ScraperExecutor を使用)
+	// NOTE: このモードではタイムアウトは呼び出し元のctxに依存します。
+	results := r.ScraperExecutor.ScrapeInParallel(ctx, urls)
+
+	// 結果オブジェクトの作成
+	// FeedTitleとTitlesMapは存在しないため、空またはnilを設定します。
+	runnerResult := &RunnerResult{
+		FeedTitle: "", // フィードモードではないため空
+		Results:   results,
+		TitlesMap: nil, // フィードモードではないためnil
+	}
+
+	return runnerResult, nil
+}
