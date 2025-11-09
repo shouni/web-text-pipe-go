@@ -67,7 +67,7 @@ var scraperCmd = &cobra.Command{
 		config := runner.RunnerConfig{
 			FeedURL:                  feedURL,
 			ClientTimeout:            clientTimeout,
-			OverallTimeoutMultiplier: 60,
+			OverallTimeoutMultiplier: 3,
 		}
 
 		// 4. ScrapeAndRun の呼び出し
@@ -96,5 +96,5 @@ var scraperCmd = &cobra.Command{
 func initScraperFlags() {
 	// runner.DefaultMaxConcurrency は以前記憶した runner パッケージでエクスポートされています
 	scraperCmd.Flags().StringP("url", "u", "https://news.yahoo.co.jp/rss/categories/it.xml", "解析対象のフィードURL (RSS/Atom)")
-	scraperCmd.Flags().IntP("concurrency", "c", runner.DefaultMaxConcurrency, "最大並列実行数 (デフォルト: 6)")
+	scraperCmd.Flags().IntP("concurrency", "c", runner.DefaultMaxConcurrency, "最大並列実行数 (デフォルト: 10)")
 }
