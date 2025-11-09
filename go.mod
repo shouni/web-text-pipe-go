@@ -7,7 +7,7 @@ require (
 	github.com/shouni/go-cli-base v1.0.5
 	github.com/shouni/go-http-kit v1.1.0
 	github.com/shouni/go-utils v1.0.8
-	github.com/shouni/go-web-exact/v2 v2.0.11
+	github.com/shouni/go-web-exact/v2 v2.0.12
 	github.com/spf13/cobra v1.10.1
 )
 
