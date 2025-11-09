@@ -26,7 +26,7 @@ func BuildScraperRunner(clientTimeout time.Duration, concurrency int) (*runner.R
 	if err != nil {
 		return nil, fmt.Errorf("Extractorの初期化エラー: %w", err)
 	}
-	scraperExecutor := scraper.NewParallelScraper(extractor, concurrency)
+	scraperExecutor := scraper.NewParallelScraper(extractor, concurrency, scraper.DefaultScrapeRateLimit)
 
 	// 4. Runner の初期化（依存関係を注入）
 	return runner.NewRunner(parser, scraperExecutor), nil

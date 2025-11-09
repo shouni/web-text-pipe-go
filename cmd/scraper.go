@@ -67,7 +67,7 @@ var scraperCmd = &cobra.Command{
 		config := runner.RunnerConfig{
 			FeedURL:                  feedURL,
 			ClientTimeout:            clientTimeout,
-			OverallTimeoutMultiplier: 2,
+			OverallTimeoutMultiplier: 60,
 		}
 
 		// 4. ScrapeAndRun の呼び出し
