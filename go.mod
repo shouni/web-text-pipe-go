@@ -7,7 +7,7 @@ require (
 	github.com/shouni/go-cli-base v1.0.5
 	github.com/shouni/go-http-kit v1.1.0
 	github.com/shouni/go-utils v1.0.8
-	github.com/shouni/go-web-exact/v2 v2.0.10
+	github.com/shouni/go-web-exact/v2 v2.0.11
 	github.com/spf13/cobra v1.10.1
 )
 
@@ -25,4 +25,5 @@ require (
 	github.com/spf13/pflag v1.0.10 // indirect
 	golang.org/x/net v0.46.0 // indirect
 	golang.org/x/text v0.30.0 // indirect
+	golang.org/x/time v0.14.0 // indirect
 )
