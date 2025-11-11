@@ -74,7 +74,7 @@ go build -o bin/webtextpipe
 ```bash
 # Yahoo!ニュースのITカテゴリのRSSを読み込み、最大8並列、タイムアウト20秒で抽出
 ./bin/webtextpipe scraper \
-    --url "[https://news.yahoo.co.jp/rss/categories/it.xml](https://news.yahoo.co.jp/rss/categories/it.xml)" \
+    --url "https://news.yahoo.co.jp/rss/categories/it.xml" \
     --concurrency 8 \
     --timeout 20 # タイムアウトを20秒に延長
 ```
@@ -98,7 +98,7 @@ go build -o bin/webtextpipe
 ```bash
 # 指定URLから本文を抽出し、結果を output.txt に保存
 ./bin/webtextpipe exact \
-    --url "[https://example.com/some-article](https://example.com/some-article)" \
+    --url "https://example.com/some-article" \
     --output-file "output.txt"
 ```
 
