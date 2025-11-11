@@ -32,11 +32,11 @@ func BuildScraperRunner(clientTimeout time.Duration, concurrency int) (*runner.R
 
 	// 4. 並列実行とレート制限を担当するコアスクレイパー (SCRAPER層)
 	// Extractorに依存し、同時実行制御とレート制限という役割を持つ。リトライロジックは含まない。
-	coreScraper := scraper.NewParallelScraper(extractor, concurrency, scraper.DefaultScrapeRateLimit) // 責務: 並列実行制御
+	coreScraper := scraper.NewParallelScraper(extractor, concurrency, scraper.DefaultScrapeRateLimit)
 
 	// 5. リトライ戦略と遅延処理を担当する ReliableScraper (RUNNER戦略層)
 	// コアスクレイパーとExtractorに依存し、リトライ戦略という上位の役割を持つ。
-	reliableScraperExecutor := runner.NewReliableScraper(coreScraper, extractor) // 責務: リトライ戦略
+	reliableScraperExecutor := runner.NewReliableScraper(coreScraper, extractor)
 
 	// 6. Runner の初期化（RUNNERワークフロー層）
 	// FeedParserとReliableScraperExecutorという最上位の依存関係を注入し、ワークフロー管理者を構築。
