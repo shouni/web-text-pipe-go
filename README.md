@@ -16,7 +16,7 @@
 * **高精度な本文抽出 (Core)**: 記事の本文のみを高精度で特定し、**ノイズ（広告、コメントなど）を排除**して整形済みテキストを返します。
 * **RSSフィード並列収集 (`scraper`)**: 指定されたフィードURLから記事URLを抽出し、**最大同時実行数を制御しながら並列で**記事本文を一括収集します。
 * **単一URL抽出 (`exact`)**: 開発やデバッグのために、**単一のURL**を指定し、その記事本文を直接抽出します。
-* **堅牢な処理**: GoのGoroutineとセマフォ制御を利用し、`go-http-kit` を通じた**リトライ**と**タイムアウト制御**をサポートすることで、大規模な収集作業の**堅牢性**を確保します。
+* **堅牢な処理**: 処理の信頼性を高める**2層リトライ構造**を採用。ネットワークレベルのリトライ（`go-http-kit`）に加え、アプリケーションの**ワークフロー層 (`pkg/runner`) で失敗URLに対する遅延リトライ戦略**を実行します。
 
 -----
 
@@ -25,10 +25,10 @@
 | 要素 | 技術 / ライブラリ | 役割 |
 | :--- | :--- | :--- |
 | **言語** | **Go (Golang)** | ツールの開発言語。並列処理と高速なCLI実行を実現します。 |
-| **コンポーネントファクトリ** | **`pkg/scraper/builder`** | **すべてのコア依存関係を構築・注入し、`runner.Runner` を初期化するファクトリ層。** |
-| **実行管理** | **`pkg/scraper/runner`** | **フィード解析から並列スクレイピング実行までのオーケストレーションを担当。** |
+| **コンポーネントファクトリ** | **`pkg/builder`** | **（ディレクトリパス変更）** すべての依存関係を構築し、リトライ戦略を注入して`runner.Runner`を初期化するファクトリ層。 |
+| **実行管理** | **`pkg/runner`** | **（ディレクトリパス変更）** フィード解析から実行制御までの**ワークフローを管理**し、失敗URLに対する**リトライ戦略**も実行する上位層。 |
 | **コア機能** | **`shouni/go-web-exact`** | フィード解析 (`pkg/feed`)、本文抽出 (`pkg/extract`)、並列スクレイピング (`pkg/scraper`) の中核機能。 |
-| **通信基盤** | **`shouni/go-http-kit`** | すべてのネットワーク通信における**自動リトライ**と**タイムアウト制御**を提供します。 |
+| **通信基盤** | **`shouni/go-http-kit`** | すべてのネットワーク通信における**指数バックオフによる自動リトライ**（低レベル）と**タイムアウト制御**を提供します。 |
 | **並行処理** | **Goroutines / セマフォ制御** | 記事ごとの抽出処理を並列化し、最大同時実行数を厳密に管理します。 |
 | **CLI** | **Cobra** | コマンドラインインターフェースの構築。 |
 
@@ -43,7 +43,7 @@
 git clone git@github.com:shouni/web-text-pipe-go.git
 cd web-text-pipe-go
 go build -o bin/webtextpipe
-```
+````
 
 ### 2\. コマンド一覧
 
@@ -67,14 +67,14 @@ go build -o bin/webtextpipe
 | `--url` | `-u` | **必須**。解析対象のRSS/AtomフィードのURLを指定します。 |
 | `--concurrency` | `-c` | 最大並列実行数。同時に処理する記事の数を制御します。`(Default: 10)` |
 | `--timeout` | (なし) | **グローバル設定**。HTTPリクエストのタイムアウト時間（秒）。`(Default: 15)` |
-| `--max-retries` | (なし) | **グローバル設定**。HTTPリクエストのリトライ最大回数。`(Default: 2)` |
+| `--max-retries` | (なし) | **グローバル設定**。HTTPリクエストの**ネットワークレベル**でのリトライ最大回数。`(Default: 2)` |
 
 #### 実行例 (scraper)
 
 ```bash
 # Yahoo!ニュースのITカテゴリのRSSを読み込み、最大8並列、タイムアウト20秒で抽出
 ./bin/webtextpipe scraper \
-    --url "https://news.yahoo.co.jp/rss/categories/it.xml" \
+    --url "[https://news.yahoo.co.jp/rss/categories/it.xml](https://news.yahoo.co.jp/rss/categories/it.xml)" \
     --concurrency 8 \
     --timeout 20 # タイムアウトを20秒に延長
 ```
@@ -98,7 +98,7 @@ go build -o bin/webtextpipe
 ```bash
 # 指定URLから本文を抽出し、結果を output.txt に保存
 ./bin/webtextpipe exact \
-    --url "https://example.com/some-article" \
+    --url "[https://example.com/some-article](https://example.com/some-article)" \
     --output-file "output.txt"
 ```
 
