@@ -7,28 +7,33 @@ import (
 	"time"
 
 	"github.com/mmcdole/gofeed"
-
 	"github.com/shouni/go-web-exact/v2/pkg/feed"
 	"github.com/shouni/go-web-exact/v2/pkg/types"
 )
 
-// DefaultMaxConcurrency は、pkg/scraper の定数を公開するために使用
-const DefaultMaxConcurrency = 10
+// ----------------------------------------------------------------
+// インターフェース定義 (DI対象)
+// ----------------------------------------------------------------
 
-// FeedParser はフィードを取得し、パースする責務を持つインターフェース
+// FeedParser はフィードの取得とパース機能を提供します。
 type FeedParser interface {
 	FetchAndParse(ctx context.Context, feedURL string) (*gofeed.Feed, error)
 }
 
-// ScraperExecutor は並列スクレイピングを実行する責務を持つインターフェース
+// ScraperExecutor はスクレイピングの実行機能を提供します。
+// ReliableScraper がこのインターフェースを実装します。
 type ScraperExecutor interface {
 	ScrapeInParallel(ctx context.Context, urls []string) []types.URLResult
 }
 
-// Runner 構造体は、具体的な実装（依存関係）を保持する
+// ----------------------------------------------------------------
+// ワークフロー管理者 (Runner)
+// ----------------------------------------------------------------
+
+// Runner は、フィードの取得、URLの抽出、スクレイピング実行という一連の処理フローを管理します。
 type Runner struct {
-	FeedParser      FeedParser      // feed.Parser のインスタンス
-	ScraperExecutor ScraperExecutor // scraper.ParallelScraper のインスタンス
+	FeedParser      FeedParser
+	ScraperExecutor ScraperExecutor // リトライ機能を持つ ReliableScraper が注入される
 }
 
 // NewRunner は依存関係を注入して Runner を初期化する関数
@@ -38,8 +43,6 @@ func NewRunner(parser FeedParser, scraperExecutor ScraperExecutor) *Runner {
 		ScraperExecutor: scraperExecutor,
 	}
 }
-
-// --- 実行設定とメインロジック ---
 
 // RunnerConfig は実行に必要な設定を保持します。
 type RunnerConfig struct {
@@ -64,14 +67,12 @@ func (r *Runner) ScrapeAndRun(ctx context.Context, config RunnerConfig) (*Runner
 	runCtx, cancel := context.WithTimeout(ctx, overallTimeout)
 	defer cancel()
 
-	// 2. フィードの取得とパースを実行 (r.FeedParser を使用)
 	slog.Info(
 		"フィードURLを解析中",
 		slog.Duration("overall_timeout", overallTimeout),
 		slog.String("feed_url", config.FeedURL),
 	)
 
-	// rssFeed は *gofeed.Feed 型
 	rssFeed, err := r.FeedParser.FetchAndParse(runCtx, config.FeedURL)
 	if err != nil {
 		slog.Error(
@@ -82,10 +83,7 @@ func (r *Runner) ScrapeAndRun(ctx context.Context, config RunnerConfig) (*Runner
 		return nil, fmt.Errorf("フィードの処理エラー: %w", err)
 	}
 
-	// 3. URLとタイトルの抽出とマップの構築
 	adapter := feed.NewFeedAdapter(rssFeed)
-
-	// URL抽出
 	urls := adapter.GetLinks()
 	titlesMap := adapter.GetTitlesMap()
 
@@ -98,49 +96,18 @@ func (r *Runner) ScrapeAndRun(ctx context.Context, config RunnerConfig) (*Runner
 		return nil, fmt.Errorf("フィード (%s) から処理対象のURLが一つも抽出されませんでした", config.FeedURL)
 	}
 
-	// 4. パイプラインの実行 (r.ScraperExecutor を使用)
 	slog.Info(
 		"並列スクレイピング実行中",
 		slog.Int("total_urls", len(urls)),
 	)
 
-	// スクレピング実行
+	// ScraperExecutor (ReliableScraper) を呼び出し
 	results := r.ScraperExecutor.ScrapeInParallel(runCtx, urls)
 
-	// 5. 結果オブジェクトの作成
 	runnerResult := &RunnerResult{
 		FeedTitle: rssFeed.Title,
 		Results:   results,
 		TitlesMap: titlesMap,
-	}
-
-	return runnerResult, nil
-}
-
-// ExecuteFromURLs は、フィード解析を経由せず、指定されたURLの配列に対して
-// 直接並列スクレイピングを実行します。
-// RunnerResult を返すために、フィードタイトルは空、TitlesMap は nil となります。
-func (r *Runner) ExecuteFromURLs(ctx context.Context, urls []string) (*RunnerResult, error) {
-
-	if len(urls) == 0 {
-		return nil, fmt.Errorf("処理対象のURLが一つも指定されていません")
-	}
-
-	slog.Info(
-		"URL配列からの並列スクレイピング実行中",
-		slog.Int("total_urls", len(urls)),
-	)
-
-	// 並列スクレイピング実行 (r.ScraperExecutor を使用)
-	// NOTE: このモードではタイムアウトは呼び出し元のctxに依存します。
-	results := r.ScraperExecutor.ScrapeInParallel(ctx, urls)
-
-	// 結果オブジェクトの作成
-	// FeedTitleとTitlesMapは存在しないため、空またはnilを設定します。
-	runnerResult := &RunnerResult{
-		FeedTitle: "", // フィードモードではないため空
-		Results:   results,
-		TitlesMap: nil, // フィードモードではないためnil
 	}
 
 	return runnerResult, nil
