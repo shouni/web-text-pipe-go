@@ -95,7 +95,6 @@ var scraperCmd = &cobra.Command{
 // --- フラグ初期化 ---
 
 func initScraperFlags() {
-	// runner.DefaultMaxConcurrency は以前記憶した runner パッケージでエクスポートされています
 	scraperCmd.Flags().StringP("url", "u", "https://news.yahoo.co.jp/rss/categories/it.xml", "解析対象のフィードURL (RSS/Atom)")
 	scraperCmd.Flags().IntP("concurrency", "c", scraper.DefaultMaxConcurrency, "最大並列実行数 (デフォルト: 10)")
 }
