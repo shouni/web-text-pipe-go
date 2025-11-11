@@ -16,12 +16,9 @@ import (
 // ----------------------------------------------------------------
 
 const (
-	// InitialScrapeDelay は初回並列スクレイピング後の待機時間 (負荷軽減)
 	InitialScrapeDelay = 5 * time.Second
-	// RetryScrapeDelay はリトライ前の待機時間 (負荷軽減)
-	RetryScrapeDelay = 3 * time.Second
-	// PhaseContent はログ用フェーズ名
-	PhaseContent = "ContentExtraction"
+	RetryScrapeDelay   = 3 * time.Second
+	PhaseContent       = "ContentExtraction"
 )
 
 // Extractor はコンテンツ抽出ロジックの抽象化です。リトライ時の単体抽出に使用します。
@@ -48,7 +45,7 @@ func NewReliableScraper(baseScraper scraper.Scraper, extractor Extractor) *Relia
 func (r *ReliableScraper) ScrapeInParallel(ctx context.Context, urls []string) []types.URLResult {
 	slog.Info("フェーズ1 - Webコンテンツの並列抽出を開始します。")
 
-	// 1. 初回並列実行 (レート制限機能を持つ下位の ParallelScraper を呼び出す)
+	// 1. 初回並列実行
 	results := r.baseScraper.ScrapeInParallel(ctx, urls)
 
 	// 2. 無条件遅延 (負荷軽減)
