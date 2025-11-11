@@ -26,12 +26,6 @@ type ScraperExecutor interface {
 	ScrapeInParallel(ctx context.Context, urls []string) []types.URLResult
 }
 
-// Extractor はコンテンツ抽出ロジックの抽象化です。リトライ時に単体で使用されます。
-// (extract.Extractorがこれを実装すると想定)
-type Extractor interface {
-	FetchAndExtractText(ctx context.Context, url string) (string, bool, error)
-}
-
 // ----------------------------------------------------------------
 // ワークフロー管理者 (Runner)
 // ----------------------------------------------------------------
@@ -73,14 +67,12 @@ func (r *Runner) ScrapeAndRun(ctx context.Context, config RunnerConfig) (*Runner
 	runCtx, cancel := context.WithTimeout(ctx, overallTimeout)
 	defer cancel()
 
-	// 2. フィードの取得とパースを実行 (r.FeedParser を使用)
 	slog.Info(
 		"フィードURLを解析中",
 		slog.Duration("overall_timeout", overallTimeout),
 		slog.String("feed_url", config.FeedURL),
 	)
 
-	// rssFeed は *gofeed.Feed 型
 	rssFeed, err := r.FeedParser.FetchAndParse(runCtx, config.FeedURL)
 	if err != nil {
 		slog.Error(
@@ -91,8 +83,7 @@ func (r *Runner) ScrapeAndRun(ctx context.Context, config RunnerConfig) (*Runner
 		return nil, fmt.Errorf("フィードの処理エラー: %w", err)
 	}
 
-	// 3. URLとタイトルの抽出とマップの構築
-	adapter := feed.NewFeedAdapter(rssFeed) // feed.FeedAdapter は外部ライブラリにあると仮定
+	adapter := feed.NewFeedAdapter(rssFeed)
 	urls := adapter.GetLinks()
 	titlesMap := adapter.GetTitlesMap()
 
@@ -105,16 +96,14 @@ func (r *Runner) ScrapeAndRun(ctx context.Context, config RunnerConfig) (*Runner
 		return nil, fmt.Errorf("フィード (%s) から処理対象のURLが一つも抽出されませんでした", config.FeedURL)
 	}
 
-	// 4. パイプラインの実行 (r.ScraperExecutor を使用)
-	// ここで ReliableScraper.ScrapeInParallel が呼び出され、リトライ処理が行われる
 	slog.Info(
 		"並列スクレイピング実行中",
 		slog.Int("total_urls", len(urls)),
 	)
 
+	// ScraperExecutor (ReliableScraper) を呼び出し
 	results := r.ScraperExecutor.ScrapeInParallel(runCtx, urls)
 
-	// 5. 結果オブジェクトの作成
 	runnerResult := &RunnerResult{
 		FeedTitle: rssFeed.Title,
 		Results:   results,

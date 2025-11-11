@@ -24,8 +24,13 @@ const (
 	PhaseContent = "ContentExtraction"
 )
 
+// Extractor はコンテンツ抽出ロジックの抽象化です。リトライ時の単体抽出に使用します。
+type Extractor interface {
+	FetchAndExtractText(ctx context.Context, url string) (string, bool, error)
+}
+
 // ReliableScraper は ScraperExecutor インターフェースを実装し、
-// 下位のコアスクレイパー (ParallelScraper) の上にリトライと遅延のロジックを重ねて信頼性を高めます。
+// リトライと遅延のロジックを重ねて信頼性を高めます。
 type ReliableScraper struct {
 	baseScraper scraper.Scraper // scraper.ParallelScraper のインターフェース
 	extractor   Extractor       // extract.Extractor のインターフェース
@@ -91,7 +96,6 @@ func (r *ReliableScraper) processFailedURLs(ctx context.Context, failedURLs []st
 	for _, url := range failedURLs {
 		slog.Info("リトライ中", slog.String("url", url))
 
-		// 注入された Extractor を使用し、単一URLを再取得
 		content, hasBodyFound, err := r.extractor.FetchAndExtractText(ctx, url)
 
 		var extractErr error
